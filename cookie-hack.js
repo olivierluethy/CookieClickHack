@@ -116,7 +116,7 @@ setInterval(() => {
 /* Für diese Webseite: https://orteil.dashnet.org/experiments/cookie/ */ 
 let Cookies = 100000; // Startvorrat
 const INTERVAL_MS = 100; // Intervall für Käufe (100 ms)
-const REFILL_AMOUNT = 10000; // Nachfüllmenge
+let totalCpS = 0; // Gesamt-Cookies pro Sekunde
 
 // Objekt zur Verfolgung der Aufrufe und Kosten
 let purchaseTracker = {
@@ -131,7 +131,7 @@ let purchaseTracker = {
   "Elder Pledge": { count: 0, costs: [], totalCost: 0 },
 };
 
-// Reihenfolge der Käufe (aufsteigende Startkosten)
+// Reihenfolge der Käufe (aufsteigende Startkosten, angepasst)
 const purchaseOrder = [
   "Cursor",
   "Grandma",
@@ -139,15 +139,35 @@ const purchaseOrder = [
   "Mine",
   "Shipment",
   "Alchemy lab",
-  "Elder Pledge",
   "Portal",
+  "Elder Pledge",
   "Time machine",
 ];
 
-// Funktion zum Nachfüllen der Cookies
-function refillCookies() {
-  Cookies += REFILL_AMOUNT;
-  console.log(`Cookies automatisch aufgefüllt! Neuer Vorrat: ${Cookies}`);
+// CpS-Werte pro Item
+const cpsValues = {
+  Cursor: 0.1,
+  Grandma: 1,
+  Farm: 8,
+  Mine: 47,
+  Factory: 260,
+  Bank: 1400,
+  Temple: 7800,
+  "Wizard Tower": 44000,
+  Shipment: 260000,
+  "Alchemy lab": 1600000,
+  Portal: 12000000,
+  "Time machine": 100000000,
+  "Elder Pledge": 0, // Kein CpS-Wert angegeben, daher 0
+};
+
+// Funktion zur Aktualisierung der Gesamt-CpS
+function updateCpS() {
+  totalCpS = 0;
+  for (let item in purchaseTracker) {
+    totalCpS += purchaseTracker[item].count * cpsValues[item];
+  }
+  console.log(`Gesamt-CpS aktualisiert: ${totalCpS} Cookies pro Sekunde`);
 }
 
 // Funktion zur Anzeige der Kauf-Tabelle
@@ -179,6 +199,14 @@ function Buy(item) {
       );
       cost = sequence[purchaseTracker[item].count + 1];
       break;
+    case "Farm":
+      sequence = generateSequenceWithGrowingDifference(
+        1100,
+        110,
+        purchaseTracker[item].count + 2
+      );
+      cost = sequence[purchaseTracker[item].count + 1];
+      break;
     case "Factory":
       sequence = generateSequenceWithGrowingDifference(
         500,
@@ -196,11 +224,37 @@ function Buy(item) {
       );
       cost = sequence[purchaseTracker[item].count + 1];
       break;
+    case "Bank":
+      sequence = generateSequenceWithGrowingDifferences(
+        14000,
+        1401,
+        140,
+        purchaseTracker[item].count + 2
+      );
+      cost = sequence[purchaseTracker[item].count + 1];
+      break;
     case "Shipment":
       sequence = generateSequenceWithGrowingDifferences(
         7000,
         701,
         70,
+        purchaseTracker[item].count + 2
+      );
+      cost = sequence[purchaseTracker[item].count + 1];
+      break;
+    case "Temple":
+      sequence = generateIncreasingDifferenceSequence(
+        200000,
+        20001,
+        2000,
+        purchaseTracker[item].count + 2
+      );
+      cost = sequence[purchaseTracker[item].count + 1];
+      break;
+    case "Wizard Tower":
+      sequence = generateMultiplicativeSequence(
+        3300000,
+        1.1,
         purchaseTracker[item].count + 2
       );
       cost = sequence[purchaseTracker[item].count + 1];
@@ -260,6 +314,7 @@ function Buy(item) {
       console.log(
         `Kauf von ${item} für ${cost} Cookies erfolgreich (Klick auf ${elementId}). Verbleibende Cookies: ${Cookies}`
       );
+      updateCpS(); // Aktualisiere CpS nach Kauf
       showPurchaseTable(); // Zeige Tabelle nach erfolgreichem Kauf
       return true;
     } else {
@@ -296,6 +351,13 @@ function forecastCookies(item, additionalPurchases) {
         currentCount + additionalPurchases + 1
       );
       break;
+    case "Farm":
+      sequence = generateSequenceWithGrowingDifference(
+        1100,
+        110,
+        currentCount + additionalPurchases + 1
+      );
+      break;
     case "Factory":
       sequence = generateSequenceWithGrowingDifference(
         500,
@@ -311,11 +373,34 @@ function forecastCookies(item, additionalPurchases) {
         currentCount + additionalPurchases + 1
       );
       break;
+    case "Bank":
+      sequence = generateSequenceWithGrowingDifferences(
+        14000,
+        1401,
+        140,
+        currentCount + additionalPurchases + 1
+      );
+      break;
     case "Shipment":
       sequence = generateSequenceWithGrowingDifferences(
         7000,
         701,
         70,
+        currentCount + additionalPurchases + 1
+      );
+      break;
+    case "Temple":
+      sequence = generateIncreasingDifferenceSequence(
+        200000,
+        20001,
+        2000,
+        currentCount + additionalPurchases + 1
+      );
+      break;
+    case "Wizard Tower":
+      sequence = generateMultiplicativeSequence(
+        3300000,
+        1.1,
         currentCount + additionalPurchases + 1
       );
       break;
@@ -373,6 +458,7 @@ function forecastCookies(item, additionalPurchases) {
 // Funktion zur Anzeige des aktuellen Status
 function showStatus() {
   console.log(`Aktuelle Cookies: ${Cookies}`);
+  console.log(`Gesamt-CpS: ${totalCpS} Cookies pro Sekunde`);
   console.log("Kaufstatistik:");
   for (let item in purchaseTracker) {
     console.log(
@@ -380,6 +466,7 @@ function showStatus() {
     );
   }
   showPurchaseTable(); // Initiale Tabelle anzeigen
+  updateCpS(); // Initiale CpS-Berechnung
 }
 
 // Funktion zur Berechnung der Kosten eines Items
@@ -393,6 +480,13 @@ function getItemCost(item) {
       sequence = generateAdvancedSequence(
         100,
         11,
+        purchaseTracker[item].count + 2
+      );
+      break;
+    case "Farm":
+      sequence = generateSequenceWithGrowingDifference(
+        1100,
+        110,
         purchaseTracker[item].count + 2
       );
       break;
@@ -411,11 +505,34 @@ function getItemCost(item) {
         purchaseTracker[item].count + 2
       );
       break;
+    case "Bank":
+      sequence = generateSequenceWithGrowingDifferences(
+        14000,
+        1401,
+        140,
+        purchaseTracker[item].count + 2
+      );
+      break;
     case "Shipment":
       sequence = generateSequenceWithGrowingDifferences(
         7000,
         701,
         70,
+        purchaseTracker[item].count + 2
+      );
+      break;
+    case "Temple":
+      sequence = generateIncreasingDifferenceSequence(
+        200000,
+        20001,
+        2000,
+        purchaseTracker[item].count + 2
+      );
+      break;
+    case "Wizard Tower":
+      sequence = generateMultiplicativeSequence(
+        3300000,
+        1.1,
         purchaseTracker[item].count + 2
       );
       break;
@@ -460,34 +577,106 @@ function getItemCost(item) {
 let currentPurchaseIndex = 0;
 
 function systematicPurchase() {
+  // Füge Cookies basierend auf CpS hinzu
+  Cookies += totalCpS * (INTERVAL_MS / 1000);
+  console.log(
+    `Cookies hinzugefügt: ${
+      totalCpS * (INTERVAL_MS / 1000)
+    }, Aktuelle Cookies: ${Cookies}`
+  );
+
   // Wähle das nächste Item in der Reihenfolge
   const item = purchaseOrder[currentPurchaseIndex];
   console.log(`Versuche Kauf von ${item}...`);
 
-  // Führe den Kauf aus
-  const success = Buy(item);
+  let purchased = false;
 
-  // Wenn der Kauf fehlschlägt, suche ein günstigeres Item
-  if (!success) {
-    let purchased = false;
-    for (let i = 0; i < purchaseOrder.length; i++) {
-      const altItem = purchaseOrder[i];
-      const cost = getItemCost(altItem);
-      if (Cookies >= cost) {
-        console.log(
-          `Kauf von ${item} fehlgeschlagen. Versuche stattdessen ${altItem}...`
-        );
-        if (Buy(altItem)) {
+  // Führe den Kauf aus
+  if (Buy(item)) {
+    purchased = true;
+  }
+
+  // Wenn der Kauf fehlschlägt, prüfe das nächstteurere Item
+  if (!purchased) {
+    // Bestimme das nächstteurere Item (vorheriges in purchaseOrder)
+    const prevIndex =
+      currentPurchaseIndex > 0
+        ? currentPurchaseIndex - 1
+        : purchaseOrder.length - 1;
+    const prevItem = purchaseOrder[prevIndex];
+    console.log(
+      `Kauf von ${item} fehlgeschlagen. Versuche stattdessen ${prevItem}...`
+    );
+
+    // Versuche Käufe, mit Abgleich des ursprünglichen Items
+    while (Cookies >= getItemCost(prevItem)) {
+      // Füge neue Cookies hinzu (simuliere Zeitverlauf eines Intervalls)
+      Cookies += totalCpS * (INTERVAL_MS / 1000);
+      console.log(
+        `Cookies hinzugefügt: ${
+          totalCpS * (INTERVAL_MS / 1000)
+        }, Aktuelle Cookies: ${Cookies}`
+      );
+
+      // Prüfe, ob das ursprüngliche Item jetzt erschwinglich ist
+      if (Cookies >= getItemCost(item)) {
+        console.log(`Ursprüngliches Item ${item} ist jetzt erschwinglich!`);
+        if (Buy(item)) {
           purchased = true;
-          break;
+          break; // Beende Schleife, da teureres Item gekauft wurde
+        }
+      }
+
+      // Kaufe das nächstteurere Item
+      if (Cookies >= getItemCost(prevItem)) {
+        if (Buy(prevItem)) {
+          purchased = true;
+        } else {
+          break; // Beende Schleife, wenn Kauf fehlschlägt (z. B. HTML-Element fehlt)
+        }
+      } else {
+        break; // Beende Schleife, wenn nicht genug Cookies für prevItem
+      }
+    }
+
+    // Wenn immer noch Cookies übrig sind, prüfe günstigere Items
+    if (Cookies > 0) {
+      // Füge neue Cookies hinzu, bevor günstigere Items geprüft werden
+      Cookies += totalCpS * (INTERVAL_MS / 1000);
+      console.log(
+        `Cookies hinzugefügt: ${
+          totalCpS * (INTERVAL_MS / 1000)
+        }, Aktuelle Cookies: ${Cookies}`
+      );
+
+      // Prüfe erneut das ursprüngliche Item
+      if (Cookies >= getItemCost(item)) {
+        console.log(`Ursprüngliches Item ${item} ist jetzt erschwinglich!`);
+        if (Buy(item)) {
+          purchased = true;
+        }
+      } else {
+        // Prüfe günstigere Items
+        for (let i = 0; i < purchaseOrder.length; i++) {
+          const altItem = purchaseOrder[i];
+          const cost = getItemCost(altItem);
+          if (Cookies >= cost) {
+            console.log(
+              `Versuche Kauf von ${altItem} mit verbleibenden Cookies...`
+            );
+            if (Buy(altItem)) {
+              purchased = true;
+            }
+          }
         }
       }
     }
+
+    // Wenn kein Kauf möglich war, warte auf neue Cookies
     if (!purchased) {
       console.log(
-        `Keine Käufe möglich mit ${Cookies} Cookies. Fülle ${REFILL_AMOUNT} Cookies nach...`
+        `Keine Käufe möglich mit ${Cookies} Cookies. Warte auf neue Cookies...`
       );
-      refillCookies();
     }
   }
 
@@ -621,6 +810,9 @@ function generateMultiplicativeSequence(start, factor, count) {
 
 // Starte das Endlosintervall
 setInterval(systematicPurchase, INTERVAL_MS);
+
+// Initialer Status
+showStatus();
 
 // Initialer Status
 showStatus();
