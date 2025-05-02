@@ -112,208 +112,288 @@ setInterval(() => {
 }, 50); // Fast interval
 
 /* Für diese Webseite: https://orteil.dashnet.org/experiments/cookie/ */ 
-// Buy Cursor
-// Start am 15 Cookies
+let Cookies = 1000000; // Startvorrat
+const REFILL_THRESHOLD = 100000; // Schwellwert für Nachfüllen
+const REFILL_AMOUNT = 1000000000000; // Nachfüllmenge
+const INTERVAL_MS = 2000; // Intervall für Käufe (2 Sekunden)
+
+// Objekt zur Verfolgung der Aufrufe und Kosten
+let purchaseTracker = {
+    'Cursor': { count: 0, costs: [], totalCost: 0 },
+    'Grandma': { count: 0, costs: [], totalCost: 0 },
+    'Factory': { count: 0, costs: [], totalCost: 0 },
+    'Mine': { count: 0, costs: [], totalCost: 0 },
+    'Shipment': { count: 0, costs: [], totalCost: 0 },
+    'Alchemy lab': { count: 0, costs: [], totalCost: 0 },
+    'Portal': { count: 0, costs: [], totalCost: 0 },
+    'Time machine': { count: 0, costs: [], totalCost: 0 },
+    'Elder Pledge': { count: 0, costs: [], totalCost: 0 }
+};
+
+// Reihenfolge der Käufe (aufsteigende Startkosten)
+const purchaseOrder = [
+    'Cursor',
+    'Grandma',
+    'Factory',
+    'Mine',
+    'Shipment',
+    'Alchemy lab',
+    'Elder Pledge',
+    'Portal',
+    'Time machine'
+];
+
+// Funktion zum Nachfüllen der Cookies
+function refillCookies() {
+    Cookies += REFILL_AMOUNT;
+    console.log(`Cookies automatisch aufgefüllt! Neuer Vorrat: ${Cookies}`);
+}
+
+// Funktion zum Kauf eines Items
+function Buy(item) {
+    let cost;
+    let sequence;
+
+    switch (item) {
+        case 'Cursor':
+            sequence = generateSequence(15, purchaseTracker[item].count + 2);
+            cost = sequence[purchaseTracker[item].count + 1];
+            break;
+        case 'Grandma':
+            sequence = generateAdvancedSequence(100, 11, purchaseTracker[item].count + 2);
+            cost = sequence[purchaseTracker[item].count + 1];
+            break;
+        case 'Factory':
+            sequence = generateSequenceWithGrowingDifference(500, 50, purchaseTracker[item].count + 2);
+            cost = sequence[purchaseTracker[item].count + 1];
+            break;
+        case 'Mine':
+            sequence = generateGrowingDifferenceSequence(2000, 200, 20, purchaseTracker[item].count + 2);
+            cost = sequence[purchaseTracker[item].count + 1];
+            break;
+        case 'Shipment':
+            sequence = generateSequenceWithGrowingDifferences(7000, 701, 70, purchaseTracker[item].count + 2);
+            cost = sequence[purchaseTracker[item].count + 1];
+            break;
+        case 'Alchemy lab':
+            sequence = generateIncreasingDifferenceSequence(50000, 5001, 500, purchaseTracker[item].count + 2);
+            cost = sequence[purchaseTracker[item].count + 1];
+            break;
+        case 'Portal':
+            sequence = generateMultiplicativeSequence(1000000, 1.1, purchaseTracker[item].count + 2);
+            cost = sequence[purchaseTracker[item].count + 1];
+            break;
+        case 'Time machine':
+            sequence = generateIncreasingDifferenceSequence(123456789, 12345679, 1234568, purchaseTracker[item].count + 2);
+            cost = sequence[purchaseTracker[item].count + 1];
+            break;
+        case 'Elder Pledge':
+            sequence = generateGrowingDifferenceSequence(666666, 140001, 17000, purchaseTracker[item].count + 2);
+            cost = sequence[purchaseTracker[item].count + 1];
+            break;
+        default:
+            console.log("Unbekanntes Item:", item);
+            return false;
+    }
+
+    if (Cookies >= cost) {
+        Cookies -= cost;
+        purchaseTracker[item].count++;
+        purchaseTracker[item].costs.push(cost);
+        purchaseTracker[item].totalCost += cost;
+        console.log(`Kauf von ${item} für ${cost} Cookies erfolgreich. Verbleibende Cookies: ${Cookies}`);
+        return true;
+    } else {
+        console.log(`Nicht genug Cookies für ${item}. Benötigt: ${cost}, Verfügbar: ${Cookies}`);
+        return false;
+    }
+}
+
+// Funktion zur Prognose der zukünftigen Kosten
+function forecastCookies(item, additionalPurchases) {
+    let sequence;
+    let totalFutureCost = 0;
+    let currentCount = purchaseTracker[item].count;
+
+    switch (item) {
+        case 'Cursor':
+            sequence = generateSequence(15, currentCount + additionalPurchases + 1);
+            break;
+        case 'Grandma':
+            sequence = generateAdvancedSequence(100, 11, currentCount + additionalPurchases + 1);
+            break;
+        case 'Factory':
+            sequence = generateSequenceWithGrowingDifference(500, 50, currentCount + additionalPurchases + 1);
+            break;
+        case 'Mine':
+            sequence = generateGrowingDifferenceSequence(2000, 200, 20, currentCount + additionalPurchases + 1);
+            break;
+        case 'Shipment':
+            sequence = generateSequenceWithGrowingDifferences(7000, 701, 70, currentCount + additionalPurchases + 1);
+            break;
+        case 'Alchemy lab':
+            sequence = generateIncreasingDifferenceSequence(50000, 5001, 500, currentCount + additionalPurchases + 1);
+            break;
+        case 'Portal':
+            sequence = generateMultiplicativeSequence(1000000, 1.1, currentCount + additionalPurchases + 1);
+            break;
+        case 'Time machine':
+            sequence = generateIncreasingDifferenceSequence(123456789, 12345679, 1234568, currentCount + additionalPurchases + 1);
+            break;
+        case 'Elder Pledge':
+            sequence = generateGrowingDifferenceSequence(666666, 140001, 17000, currentCount + additionalPurchases + 1);
+            break;
+        default:
+            console.log("Unbekanntes Item:", item);
+            return;
+    }
+
+    for (let i = currentCount + 1; i <= currentCount + additionalPurchases; i++) {
+        totalFutureCost += sequence[i];
+    }
+
+    console.log(`Prognose für ${additionalPurchases} weitere Käufe von ${item}: ${totalFutureCost} Cookies`);
+    console.log(`Aktuelle Cookies: ${Cookies}. Cookies reichen für ${Math.floor(Cookies / (totalFutureCost / additionalPurchases))} weitere Käufe.`);
+    return totalFutureCost;
+}
+
+// Funktion zur Anzeige des aktuellen Status
+function showStatus() {
+    console.log(`Aktuelle Cookies: ${Cookies}`);
+    console.log("Kaufstatistik:");
+    for (let item in purchaseTracker) {
+        console.log(`${item}: ${purchaseTracker[item].count} Käufe, Gesamtkosten: ${purchaseTracker[item].totalCost} Cookies`);
+    }
+}
+
+// Systematischer Aufruf der Käufe
+let currentPurchaseIndex = 0;
+
+function systematicPurchase() {
+    // Prüfe, ob Cookies nachgefüllt werden müssen
+    if (Cookies < REFILL_THRESHOLD) {
+        refillCookies();
+    }
+
+    // Wähle das nächste Item in der Reihenfolge
+    const item = purchaseOrder[currentPurchaseIndex];
+    console.log(`Versuche Kauf von ${item}...`);
+
+    // Führe den Kauf aus
+    Buy(item);
+
+    // Prognose für die nächsten 5 Käufe dieses Items
+    forecastCookies(item, 5);
+
+    // Gehe zum nächsten Item in der Reihenfolge
+    currentPurchaseIndex = (currentPurchaseIndex + 1) % purchaseOrder.length;
+}
+
+// Deine ursprünglichen Sequenz-Generierungsfunktionen
 function generateSequence(start, count) {
     let sequence = [start];
     let current = start;
     let diff = 2;
     let repeat = 0;
-    let repeatLimit = 3; // wie oft dieselbe Differenz benutzt wird
+    let repeatLimit = 3;
 
     for (let i = 1; i < count; i++) {
         current += diff;
         sequence.push(current);
-
         repeat++;
         if ((diff < 4 && repeat >= 3) || (diff >= 4 && repeat >= 2)) {
             diff++;
             repeat = 0;
         }
     }
-
     return sequence;
 }
 
-console.log(generateSequence(15, 30)); // 30 Zahlen ab 15
-
-// Aufruf der Funktion mittels: Buy('Cursor')
-
-// Buy Grandma
-// Start ab 100 Cookies
 function generateAdvancedSequence(start, initialDiff, count) {
     let sequence = [start];
     let current = start;
     let diff = initialDiff;
-    let diffIncrement = 1; // Start mit +1 Zuwachs
-    let diffSwitchPoint = 5; // Nach 5 Schritten auf +2 Zuwachs wechseln
+    let diffIncrement = 1;
+    let diffSwitchPoint = 5;
 
     for (let i = 1; i < count; i++) {
         current += diff;
         sequence.push(current);
-
-        // Unterschied erhöhen
         if (i < diffSwitchPoint) {
             diff += 1;
         } else {
             diff += 2;
         }
     }
-
     return sequence;
 }
 
-console.log(generateAdvancedSequence(100, 11, 25)); // Start bei 100, erste Differenz 11, 25 Zahlen
-
-// Aufruf der Funktion mittels: Buy('Grandma')
-
-// Buy Factory
-// Start ab 500 Cookies
 function generateSequenceWithGrowingDifference(start, initialDiff, count) {
     let sequence = [start];
     let current = start;
-    let diff = initialDiff;  // Startdifferenz
-    let increment = 5;  // Differenzsteigerung jedes Mal (z. B. um 5 wachsen)
+    let diff = initialDiff;
+    let increment = 5;
 
     for (let i = 1; i < count; i++) {
         current += diff;
         sequence.push(current);
-
-        // Steigere die Differenz nach jedem Schritt
         diff += increment;
     }
-
     return sequence;
 }
 
-console.log(generateSequenceWithGrowingDifference(500, 50, 25)); // Start bei 500, erste Differenz 50, 25 Zahlen
-
-// Aufruf der Funktion mittels: Buy('Factory')
-
-// Buy Mine
-// Start ab 2000 Cookies
 function generateGrowingDifferenceSequence(start, initialDiff, increment, count) {
     let sequence = [start];
     let current = start;
-    let diff = initialDiff; // Startdifferenz
+    let diff = initialDiff;
 
     for (let i = 1; i < count; i++) {
         current += diff;
         sequence.push(current);
-
-        // Steigere die Differenz nach jedem Schritt
         diff += increment;
     }
-
     return sequence;
 }
 
-console.log(generateGrowingDifferenceSequence(2000, 200, 20, 25)); // Start bei 2000, Differenz 200, Zuwachs +20, 25 Zahlen
-
-// Aufruf der Funktion mittels: Buy('Mine')
-
-// Buy Shipment
-// Start ab 7000 Cookies
 function generateSequenceWithGrowingDifferences(start, initialDiff, increment, count) {
     let sequence = [start];
     let current = start;
-    let diff = initialDiff; // Startdifferenz
+    let diff = initialDiff;
 
     for (let i = 1; i < count; i++) {
         current += diff;
         sequence.push(current);
-
-        // Steigere die Differenz nach jedem Schritt
         diff += increment;
     }
-
     return sequence;
 }
 
-console.log(generateSequenceWithGrowingDifferences(7000, 701, 70, 20)); // Start bei 7000, Differenz 701, Zuwachs +70, 20 Zahlen
-
-// Aufruf der Funktion mittels: Buy('Shipment')
-
-// Buy Alchemy lab
-// Start ab 50000 Cookies
 function generateIncreasingDifferenceSequence(start, initialDiff, increment, count) {
     let sequence = [start];
     let current = start;
-    let diff = initialDiff; // Startdifferenz
+    let diff = initialDiff;
 
     for (let i = 1; i < count; i++) {
         current += diff;
         sequence.push(current);
-
-        // Steigere die Differenz nach jedem Schritt
         diff += increment;
     }
-
     return sequence;
 }
 
-console.log(generateIncreasingDifferenceSequence(50000, 5001, 500, 20)); // Start bei 50000, Differenz 5001, Zuwachs +500, 20 Zahlen
-
-// Aufruf der Funktion mittels: Buy('Alchemy lab')
-
-// Buy Portal
-// Start ab 1000000 Cookies
 function generateMultiplicativeSequence(start, factor, count) {
     let sequence = [start];
     let current = start;
 
     for (let i = 1; i < count; i++) {
-        current = Math.round(current * factor); // Multipliziere mit dem Faktor (hier etwa 1.1)
+        current = Math.round(current * factor);
         sequence.push(current);
     }
-
     return sequence;
 }
 
-console.log(generateMultiplicativeSequence(1000000, 1.1, 20)); // Start bei 1.000.000, Wachstumsfaktor 1.1, 20 Zahlen
+// Starte das Endlosintervall
+setInterval(systematicPurchase, INTERVAL_MS);
 
-// Aufruf der Funktion mittels: Buy('Portal')
-
-// Buy Time machine
-// Start ab 123456789 Cookies
-function generateIncreasingDifferenceSequence(start, initialDiff, increment, count) {
-    let sequence = [start];
-    let current = start;
-    let diff = initialDiff; // Startdifferenz
-
-    for (let i = 1; i < count; i++) {
-        current += diff;
-        sequence.push(current);
-
-        // Steigere die Differenz nach jedem Schritt
-        diff += increment;
-    }
-
-    return sequence;
-}
-
-console.log(generateIncreasingDifferenceSequence(123456789, 12345679, 1234568, 20)); // Start bei 123456789, Differenz 12345679, Zuwachs +1234568, 20 Zahlen
-
-// Aufruf der Funktion mittels: Buy('Time machine')
-
-// Buy Elder Pledge
-// Start bei 666666
-function generateGrowingDifferenceSequence(start, initialDiff, increment, count) {
-    let sequence = [start];
-    let current = start;
-    let diff = initialDiff; // Startdifferenz
-
-    for (let i = 1; i < count; i++) {
-        current += diff;
-        sequence.push(current);
-
-        // Steigere die Differenz nach jedem Schritt
-        diff += increment;
-    }
-
-    return sequence;
-}
-
-console.log(generateGrowingDifferenceSequence(666666, 140001, 17000, 20)); // Start bei 666666, Differenz 140001, Zuwachs +17000, 20 Zahlen
-
-// Aufruf der Funktion mittels: Buy('Elder Pledge')
+// Initialer Status
+showStatus();
