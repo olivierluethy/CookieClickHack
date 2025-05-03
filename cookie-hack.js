@@ -114,9 +114,12 @@ setInterval(() => {
 /* -------------------------------------------------------------------------- */
 
 /* Für diese Webseite: https://orteil.dashnet.org/experiments/cookie/ */
-let Cookies = 1000; // Starting cookie amount
+let Cookies = 1000; // Starting cookie amount (set to 1000 for low start testing)
 const INTERVAL_MS = 100; // Purchase interval (100 ms)
 let totalCpS = 0; // Total Cookies per Second
+const LOW_START_THRESHOLD = 1000; // Threshold for low start strategy
+const CPS_SWITCH_THRESHOLD = 10; // CpS threshold to switch to systematic strategy
+let lastUpdateTime = Date.now(); // Track time for CpS generation
 
 // Object to track purchases and costs (only relevant items)
 let purchaseTracker = {
@@ -142,7 +145,7 @@ const purchaseOrder = [
   "Time machine",
 ];
 
-// CpS values per item (as provided)
+// CpS values per item
 const cpsValues = {
   Cursor: 0.1,
   Grandma: 1,
@@ -257,7 +260,7 @@ function Buy(item) {
     purchaseTracker[item].totalCost += cost;
 
     // Simulate click on the corresponding HTML element
-    const elementId = `buy${item}`;
+    const elementId = `buy${item.replace(/\s/g, "")}`; // Fix for spaces in IDs
     const element = document.getElementById(elementId);
     if (element) {
       element.click();
@@ -447,12 +450,54 @@ function getItemCost(item) {
   return sequence[purchaseTracker[item].count + 1];
 }
 
-// Systematic purchase logic
-function systematicPurchase() {
-  // Add cookies based on CpS
-  Cookies += totalCpS * (INTERVAL_MS / 1000);
-  console.log(`Cookies hinzugefügt: ${totalCpS * (INTERVAL_MS / 1000)}, Aktuelle Cookies: ${Cookies}`);
+// Update cookies based on CpS and elapsed time
+function updateCookies() {
+  const currentTime = Date.now();
+  const elapsedSeconds = (currentTime - lastUpdateTime) / 1000;
+  Cookies += totalCpS * elapsedSeconds;
+  lastUpdateTime = currentTime;
+  console.log(
+    `Cookies aktualisiert: +${
+      totalCpS * elapsedSeconds
+    }, Aktuelle Cookies: ${Cookies}`
+  );
+}
 
+// Purchase strategy for low start values (prioritize cheap items)
+function lowStartPurchase() {
+  let purchased = false;
+
+  // Start with the cheapest item
+  for (let i = 0; i < purchaseOrder.length; i++) {
+    const item = purchaseOrder[i];
+    console.log(`Versuche Kauf von ${item} (niedriger Startwert)...`);
+
+    // Attempt purchase
+    if (Buy(item)) {
+      purchased = true;
+      lastUpdateTime = Date.now(); // Reset time after purchase
+      break; // Exit loop after a successful purchase
+    }
+  }
+
+  // If no purchase was possible, update cookies and wait
+  if (!purchased) {
+    updateCookies();
+    console.log(
+      `Keine Käufe möglich mit ${Cookies} Cookies. Warte auf neue Cookies...`
+    );
+  }
+
+  // Forecast for the cheapest item
+  const cheapestItem = purchaseOrder[0];
+  forecastCookies(cheapestItem, 5);
+
+  // Show table after each cycle
+  showPurchaseTable();
+}
+
+// Systematic purchase logic with dynamic check for more expensive items
+function systematicPurchase() {
   let purchased = false;
 
   // Start with the most expensive item
@@ -463,12 +508,30 @@ function systematicPurchase() {
     // Attempt purchase
     if (Buy(item)) {
       purchased = true;
+      lastUpdateTime = Date.now(); // Reset time after purchase
       break; // Exit loop after a successful purchase
+    } else {
+      // Check if a more expensive item is affordable after waiting
+      for (let j = purchaseOrder.length - 1; j > i; j--) {
+        const moreExpensiveItem = purchaseOrder[j];
+        if (Cookies >= getItemCost(moreExpensiveItem)) {
+          console.log(
+            `Teureres Item ${moreExpensiveItem} ist jetzt erschwinglich!`
+          );
+          if (Buy(moreExpensiveItem)) {
+            purchased = true;
+            lastUpdateTime = Date.now(); // Reset time after purchase
+            break;
+          }
+        }
+      }
+      if (purchased) break; // Exit outer loop if a purchase was made
     }
   }
 
-  // If no purchase was possible, wait for more cookies
+  // If no purchase was possible, update cookies and wait
   if (!purchased) {
+    updateCookies();
     console.log(
       `Keine Käufe möglich mit ${Cookies} Cookies. Warte auf neue Cookies...`
     );
@@ -480,6 +543,17 @@ function systematicPurchase() {
 
   // Show table after each cycle
   showPurchaseTable();
+}
+
+// Main purchase loop (decides which strategy to use)
+function mainPurchaseLoop() {
+  if (Cookies <= LOW_START_THRESHOLD && totalCpS < CPS_SWITCH_THRESHOLD) {
+    console.log("Verwende Strategie für niedrigen Startwert...");
+    lowStartPurchase();
+  } else {
+    console.log("Verwende systematische Strategie...");
+    systematicPurchase();
+  }
 }
 
 // Sequence generation functions
@@ -600,7 +674,7 @@ function generateMultiplicativeSequence(start, factor, count) {
 }
 
 // Start the endless interval
-setInterval(systematicPurchase, INTERVAL_MS);
+setInterval(mainPurchaseLoop, INTERVAL_MS);
 
 // Initial status
 showStatus();
