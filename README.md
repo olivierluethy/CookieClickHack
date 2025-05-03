@@ -39,6 +39,90 @@ Dazu passt am besten der Spruch aus dem Buch **The Mythical Man-Month**:
 
 ---
 
+```javascript
+function systematicPurchase() {
+  let purchased = false;
+
+  // Start with the most expensive item
+  for (let i = purchaseOrder.length - 1; i >= 0; i--) {
+    const item = purchaseOrder[i];
+    console.log(`Versuche Kauf von ${item}...`);
+
+    // Attempt purchase
+    if (Buy(item)) {
+      purchased = true;
+      lastUpdateTime = Date.now(); // Reset time after purchase
+      break; // Exit loop after a successful purchase
+    } else {
+      // Check if a more expensive item is affordable after waiting
+      for (let j = purchaseOrder.length - 1; j > i; j--) {
+        const moreExpensiveItem = purchaseOrder[j];
+        if (Cookies >= getItemCost(moreExpensiveItem)) {
+          console.log(
+            `Teureres Item ${moreExpensiveItem} ist jetzt erschwinglich!`
+          );
+          if (Buy(moreExpensiveItem)) {
+            purchased = true;
+            lastUpdateTime = Date.now(); // Reset time after purchase
+            break;
+          }
+        }
+      }
+      if (purchased) break; // Exit outer loop if a purchase was made
+    }
+  }
+
+  // If no purchase was possible, update cookies and wait
+  if (!purchased) {
+    updateCookies();
+    console.log(
+      `Keine Käufe möglich mit ${Cookies} Cookies. Warte auf neue Cookies...`
+    );
+  }
+
+  // Forecast for the most expensive item
+  const mostExpensiveItem = purchaseOrder[purchaseOrder.length - 1];
+  forecastCookies(mostExpensiveItem, 5);
+
+  // Show table after each cycle
+  showPurchaseTable();
+}
+```
+
+```javascript
+function lowStartPurchase() {
+  let purchased = false;
+
+  // Start with the cheapest item
+  for (let i = 0; i < purchaseOrder.length; i++) {
+    const item = purchaseOrder[i];
+    console.log(`Versuche Kauf von ${item} (niedriger Startwert)...`);
+
+    // Attempt purchase
+    if (Buy(item)) {
+      purchased = true;
+      lastUpdateTime = Date.now(); // Reset time after purchase
+      break; // Exit loop after a successful purchase
+    }
+  }
+
+  // If no purchase was possible, update cookies and wait
+  if (!purchased) {
+    updateCookies();
+    console.log(
+      `Keine Käufe möglich mit ${Cookies} Cookies. Warte auf neue Cookies...`
+    );
+  }
+
+  // Forecast for the cheapest item
+  const cheapestItem = purchaseOrder[0];
+  forecastCookies(cheapestItem, 5);
+
+  // Show table after each cycle
+  showPurchaseTable();
+}
+```
+
 ## ✨ Features
 
 - 🍪 Sets cookies to `Infinity` continuously
