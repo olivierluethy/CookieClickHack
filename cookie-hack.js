@@ -1,57 +1,36 @@
 /* Works for: https://orteil.dashnet.org/cookieclicker/ */
 
-Game.heavenlyChips = 1e+200
+Game.heavenlyChips = 1e+200;
 
+// Click every "enabled crate upgrade" inside a container. The same crate +
+// upgrade + enabled filter is used for the toggle, tech and upgrade panels, so
+// it lives here once instead of being copy-pasted three times.
+function clickEnabledCrates(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  for (const el of container.children) {
+    if (
+      el.classList.contains("crate") &&
+      el.classList.contains("upgrade") &&
+      el.classList.contains("enabled")
+    ) {
+      el.click();
+    }
+  }
+}
+
+// Main injector loop: pin cookies to Infinity and click every purchasable
+// upgrade and product once per tick.
 setInterval(() => {
   // Set cookies to infinity
   if (typeof Game !== "undefined") {
     Game.cookies = Infinity;
   }
 
-  // Toggle-Upgrades click
-  const toggleUpgrades = document.getElementById("toggleUpgrades");
-  if (toggleUpgrades) {
-    const toggleItems = Array.from(toggleUpgrades.children);
-    for (const toggle of toggleItems) {
-      if (
-        toggle.classList.contains("crate") &&
-        toggle.classList.contains("upgrade") &&
-        toggle.classList.contains("enabled")
-      ) {
-        toggle.click();
-      }
-    }
-  }
-
-  // Tech-Upgrades click
-  const techUpgrades = document.getElementById("techUpgrades");
-  if (techUpgrades) {
-    const techItems = Array.from(techUpgrades.children);
-    for (const item of techItems) {
-      if (
-        item.classList.contains("crate") &&
-        item.classList.contains("upgrade") &&
-        item.classList.contains("enabled")
-      ) {
-        item.click();
-      }
-    }
-  }
-
-  // Automatically buy upgrades
-  const upgradesContainer = document.getElementById("upgrades");
-  if (upgradesContainer) {
-    const upgrades = Array.from(upgradesContainer.children);
-    for (const upgrade of upgrades) {
-      if (
-        upgrade.classList.contains("crate") &&
-        upgrade.classList.contains("upgrade") &&
-        upgrade.classList.contains("enabled")
-      ) {
-        upgrade.click();
-      }
-    }
-  }
+  // Toggle, tech and upgrade panels: click all enabled crate upgrades
+  clickEnabledCrates("toggleUpgrades");
+  clickEnabledCrates("techUpgrades");
+  clickEnabledCrates("upgrades");
 
   // Automatically buy products
   const productsContainer = document.getElementById("products");
@@ -59,13 +38,12 @@ setInterval(() => {
   if (productsContainer) {
     const products = Array.from(productsContainer.children);
 
-    // One-time special click on the first product's specific child element
-    const firstProduct = products[0];
-    const targetElement = firstProduct?.children[4];
+    // One-time special click on the first product's specific child element,
+    // guarded by the .selected class so it only fires while not yet selected.
+    const targetElement = products[0]?.children[4];
 
     if (targetElement && !targetElement.classList.contains("selected")) {
       targetElement.click();
-      firstProductClicked = true;
     }
 
     // Click all valid products
@@ -80,36 +58,37 @@ setInterval(() => {
       }
     }
   }
-  /* On each row push level up */
-  const rows = document.getElementById("rows");
-
-  if (rows) {
-    setInterval(() => {
-      Array.from(rows.children).forEach((child) => {
-        const productButtons = child.querySelector(".productButtons");
-        if (productButtons && productButtons.firstElementChild) {
-          productButtons.firstElementChild.click();
-        }
-      });
-    }, 1000); // Click every 1000 milliseconds (1 second)
-  }
-
-  const bigCookie = document.getElementById("bigCookie");
-
-  if (bigCookie) {
-    setInterval(() => {
-      bigCookie.click();
-    }, 50); // Clicks every 50 milliseconds
-  }
-
-  const cookieLevel =
-    document.getElementById("sectionLeftExtra").children[0].children[0];
-  if (cookieLevel) {
-    setInterval(() => {
-      cookieLevel.click();
-    }, 50); // Clicks every 50 milliseconds
-  }
 }, 50); // Fast interval
+
+// Recurring clickers — registered ONCE (not inside the fast loop, which used to
+// spawn a fresh trio of intervals every 50 ms). Each timer re-resolves its
+// target on every fire, so it starts working as soon as the element exists.
+
+/* On each row push level up */
+setInterval(() => {
+  const rows = document.getElementById("rows");
+  if (!rows) return;
+  Array.from(rows.children).forEach((child) => {
+    const productButtons = child.querySelector(".productButtons");
+    if (productButtons && productButtons.firstElementChild) {
+      productButtons.firstElementChild.click();
+    }
+  });
+}, 1000); // Click every 1000 milliseconds (1 second)
+
+// Click the big cookie
+setInterval(() => {
+  document.getElementById("bigCookie")?.click();
+}, 50); // Clicks every 50 milliseconds
+
+// Click the cookie-level control
+setInterval(() => {
+  const cookieLevel =
+    document.getElementById("sectionLeftExtra")?.children[0]?.children[0];
+  if (cookieLevel) {
+    cookieLevel.click();
+  }
+}, 50); // Clicks every 50 milliseconds
 
 /* -------------------------------------------------------------------------- */
 
