@@ -136,6 +136,31 @@ const cpsValues = {
   "Time machine": 100000000,
 };
 
+// Single source of truth for how each item's cost sequence is built. The same
+// item -> generator mapping used to be copy-pasted as an eight-case switch in
+// Buy(), forecastCookies() and getItemCost(); they now all go through
+// buildSequence(). Each entry takes the desired sequence length and returns the
+// full cost sequence.
+const sequenceConfig = {
+  Cursor: (count) => generateSequence(15, count),
+  Grandma: (count) => generateAdvancedSequence(100, 11, count),
+  Factory: (count) => generateSequenceWithGrowingDifference(500, 50, count),
+  Mine: (count) => generateGrowingDifferenceSequence(2000, 200, 20, count),
+  Shipment: (count) =>
+    generateSequenceWithGrowingDifferences(7000, 701, 70, count),
+  "Alchemy lab": (count) =>
+    generateIncreasingDifferenceSequence(50000, 5001, 500, count),
+  Portal: (count) => generateMultiplicativeSequence(1000000, 1.1, count),
+  "Time machine": (count) =>
+    generateIncreasingDifferenceSequence(123456789, 12345679, 1234568, count),
+};
+
+// Build an item's cost sequence of the given length, or null for unknown items.
+function buildSequence(item, count) {
+  const factory = sequenceConfig[item];
+  return factory ? factory(count) : null;
+}
+
 // Update total CpS
 function updateCpS() {
   totalCpS = 0;
@@ -157,79 +182,13 @@ function showPurchaseTable() {
 
 // Trigger a purchase
 function Buy(item) {
-  let cost;
-  let sequence;
-
-  // Determine cost based on item
-  switch (item) {
-    case "Cursor":
-      sequence = generateSequence(15, purchaseTracker[item].count + 2);
-      cost = sequence[purchaseTracker[item].count + 1];
-      break;
-    case "Grandma":
-      sequence = generateAdvancedSequence(
-        100,
-        11,
-        purchaseTracker[item].count + 2
-      );
-      cost = sequence[purchaseTracker[item].count + 1];
-      break;
-    case "Factory":
-      sequence = generateSequenceWithGrowingDifference(
-        500,
-        50,
-        purchaseTracker[item].count + 2
-      );
-      cost = sequence[purchaseTracker[item].count + 1];
-      break;
-    case "Mine":
-      sequence = generateGrowingDifferenceSequence(
-        2000,
-        200,
-        20,
-        purchaseTracker[item].count + 2
-      );
-      cost = sequence[purchaseTracker[item].count + 1];
-      break;
-    case "Shipment":
-      sequence = generateSequenceWithGrowingDifferences(
-        7000,
-        701,
-        70,
-        purchaseTracker[item].count + 2
-      );
-      cost = sequence[purchaseTracker[item].count + 1];
-      break;
-    case "Alchemy lab":
-      sequence = generateIncreasingDifferenceSequence(
-        50000,
-        5001,
-        500,
-        purchaseTracker[item].count + 2
-      );
-      cost = sequence[purchaseTracker[item].count + 1];
-      break;
-    case "Portal":
-      sequence = generateMultiplicativeSequence(
-        1000000,
-        1.1,
-        purchaseTracker[item].count + 2
-      );
-      cost = sequence[purchaseTracker[item].count + 1];
-      break;
-    case "Time machine":
-      sequence = generateIncreasingDifferenceSequence(
-        123456789,
-        12345679,
-        1234568,
-        purchaseTracker[item].count + 2
-      );
-      cost = sequence[purchaseTracker[item].count + 1];
-      break;
-    default:
-      console.log("Unbekanntes Item:", item);
-      return false;
+  // Determine cost based on item (see sequenceConfig)
+  if (!sequenceConfig[item]) {
+    console.log("Unbekanntes Item:", item);
+    return false;
   }
+  const sequence = buildSequence(item, purchaseTracker[item].count + 2);
+  const cost = sequence[purchaseTracker[item].count + 1];
 
   // Check if enough cookies are available
   if (Cookies >= cost) {
@@ -268,71 +227,13 @@ function Buy(item) {
 
 // Forecast future costs
 function forecastCookies(item, additionalPurchases) {
-  let sequence;
+  if (!sequenceConfig[item]) {
+    console.log("Unbekanntes Item:", item);
+    return;
+  }
   let totalFutureCost = 0;
   let currentCount = purchaseTracker[item].count;
-
-  switch (item) {
-    case "Cursor":
-      sequence = generateSequence(15, currentCount + additionalPurchases + 1);
-      break;
-    case "Grandma":
-      sequence = generateAdvancedSequence(
-        100,
-        11,
-        currentCount + additionalPurchases + 1
-      );
-      break;
-    case "Factory":
-      sequence = generateSequenceWithGrowingDifference(
-        500,
-        50,
-        currentCount + additionalPurchases + 1
-      );
-      break;
-    case "Mine":
-      sequence = generateGrowingDifferenceSequence(
-        2000,
-        200,
-        20,
-        currentCount + additionalPurchases + 1
-      );
-      break;
-    case "Shipment":
-      sequence = generateSequenceWithGrowingDifferences(
-        7000,
-        701,
-        70,
-        currentCount + additionalPurchases + 1
-      );
-      break;
-    case "Alchemy lab":
-      sequence = generateIncreasingDifferenceSequence(
-        50000,
-        5001,
-        500,
-        currentCount + additionalPurchases + 1
-      );
-      break;
-    case "Portal":
-      sequence = generateMultiplicativeSequence(
-        1000000,
-        1.1,
-        currentCount + additionalPurchases + 1
-      );
-      break;
-    case "Time machine":
-      sequence = generateIncreasingDifferenceSequence(
-        123456789,
-        12345679,
-        1234568,
-        currentCount + additionalPurchases + 1
-      );
-      break;
-    default:
-      console.log("Unbekanntes Item:", item);
-      return;
-  }
+  const sequence = buildSequence(item, currentCount + additionalPurchases + 1);
 
   for (let i = currentCount + 1; i <= currentCount + additionalPurchases; i++) {
     totalFutureCost += sequence[i];
@@ -365,67 +266,8 @@ function showStatus() {
 
 // Calculate cost of an item
 function getItemCost(item) {
-  let sequence;
-  switch (item) {
-    case "Cursor":
-      sequence = generateSequence(15, purchaseTracker[item].count + 2);
-      break;
-    case "Grandma":
-      sequence = generateAdvancedSequence(
-        100,
-        11,
-        purchaseTracker[item].count + 2
-      );
-      break;
-    case "Factory":
-      sequence = generateSequenceWithGrowingDifference(
-        500,
-        50,
-        purchaseTracker[item].count + 2
-      );
-      break;
-    case "Mine":
-      sequence = generateGrowingDifferenceSequence(
-        2000,
-        200,
-        20,
-        purchaseTracker[item].count + 2
-      );
-      break;
-    case "Shipment":
-      sequence = generateSequenceWithGrowingDifferences(
-        7000,
-        701,
-        70,
-        purchaseTracker[item].count + 2
-      );
-      break;
-    case "Alchemy lab":
-      sequence = generateIncreasingDifferenceSequence(
-        50000,
-        5001,
-        500,
-        purchaseTracker[item].count + 2
-      );
-      break;
-    case "Portal":
-      sequence = generateMultiplicativeSequence(
-        1000000,
-        1.1,
-        purchaseTracker[item].count + 2
-      );
-      break;
-    case "Time machine":
-      sequence = generateIncreasingDifferenceSequence(
-        123456789,
-        12345679,
-        1234568,
-        purchaseTracker[item].count + 2
-      );
-      break;
-    default:
-      return Infinity;
-  }
+  if (!sequenceConfig[item]) return Infinity;
+  const sequence = buildSequence(item, purchaseTracker[item].count + 2);
   return sequence[purchaseTracker[item].count + 1];
 }
 
