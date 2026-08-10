@@ -573,11 +573,14 @@ function generateAdvancedSequence(start, initialDiff, count) {
   return sequence;
 }
 
-function generateSequenceWithGrowingDifference(start, initialDiff, count) {
+// Core linear-growing-difference sequence: start, then each step adds `diff`,
+// and `diff` itself grows by a fixed `increment`. Four generators below were
+// byte-for-byte copies of this algorithm; they are now thin wrappers so every
+// existing call site and numeric output stays identical.
+function linearDiffSequence(start, initialDiff, increment, count) {
   let sequence = [start];
   let current = start;
   let diff = initialDiff;
-  let increment = 5;
 
   for (let i = 1; i < count; i++) {
     current += diff;
@@ -585,6 +588,10 @@ function generateSequenceWithGrowingDifference(start, initialDiff, count) {
     diff += increment;
   }
   return sequence;
+}
+
+function generateSequenceWithGrowingDifference(start, initialDiff, count) {
+  return linearDiffSequence(start, initialDiff, 5, count);
 }
 
 function generateGrowingDifferenceSequence(
@@ -593,16 +600,7 @@ function generateGrowingDifferenceSequence(
   increment,
   count
 ) {
-  let sequence = [start];
-  let current = start;
-  let diff = initialDiff;
-
-  for (let i = 1; i < count; i++) {
-    current += diff;
-    sequence.push(current);
-    diff += increment;
-  }
-  return sequence;
+  return linearDiffSequence(start, initialDiff, increment, count);
 }
 
 function generateSequenceWithGrowingDifferences(
@@ -611,16 +609,7 @@ function generateSequenceWithGrowingDifferences(
   increment,
   count
 ) {
-  let sequence = [start];
-  let current = start;
-  let diff = initialDiff;
-
-  for (let i = 1; i < count; i++) {
-    current += diff;
-    sequence.push(current);
-    diff += increment;
-  }
-  return sequence;
+  return linearDiffSequence(start, initialDiff, increment, count);
 }
 
 function generateIncreasingDifferenceSequence(
@@ -629,16 +618,7 @@ function generateIncreasingDifferenceSequence(
   increment,
   count
 ) {
-  let sequence = [start];
-  let current = start;
-  let diff = initialDiff;
-
-  for (let i = 1; i < count; i++) {
-    current += diff;
-    sequence.push(current);
-    diff += increment;
-  }
-  return sequence;
+  return linearDiffSequence(start, initialDiff, increment, count);
 }
 
 function generateMultiplicativeSequence(start, factor, count) {
