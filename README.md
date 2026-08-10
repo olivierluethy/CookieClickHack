@@ -56,6 +56,14 @@ already at the start you can buy many expensive elements, and they contribute to
 new cookies being produced faster in the background — so the balance climbs back
 up to a sufficiently high value for the next expensive element quickly enough.
 
+```mermaid
+flowchart LR
+  A["High start balance"] --> B["Buy expensive items early"]
+  B --> C["More background CpS"]
+  C --> D["Balance refills faster"]
+  D --> B
+```
+
 ### The "re-check before dropping down" mechanism
 
 The background logic adds one more thing. The engine buys the **most expensive
@@ -71,6 +79,14 @@ more that is produced in the background; and the more the cookie generation can
 diverge during the comparison window against the cheaper option — **the faster a
 purchase of a more expensive element pays for itself.**
 
+```mermaid
+flowchart TD
+  A["Can't afford the dearest item"] --> B["Time passes, CpS accrues cookies"]
+  B --> C{"Did the dearer item<br/>just become affordable?"}
+  C -- yes --> D["Buy the dearer item after all"]
+  C -- no --> E["Step down to a cheaper item"]
+```
+
 ### Why a low start (1000) is a poor fit for this mechanism
 
 This background mechanism behaves worse, and is less suitable, when the cookie
@@ -79,6 +95,13 @@ or Factory at the beginning. You barely reach the *middle* of the range from
 cheapest to most expensive — or only after a very long time — and in the
 meantime a lot of background resources are required that are not really used
 cleanly, so much of it is for nothing.
+
+```mermaid
+flowchart LR
+  A["Start = 1000"] --> B["Afford only Cursor / Grandma / Factory"]
+  B --> C["Barely reach the middle,<br/>and only slowly"]
+  C --> D["Background resources spent<br/>without clean use"]
+```
 
 On top of that: if you check before buying whether you can *somehow* still
 afford a slightly more expensive element — even though the probability of that
@@ -131,6 +154,14 @@ as soon as higher values are added, it stops working, and you get a slow
 ramp-up and a very fast ramp-down — which, over a longer period, cannot really
 sustain the performance.
 
+```mermaid
+flowchart TD
+  K["Keep the algorithm<br/>(both low & high start)"] --> K1["Low start: slightly slower climb"]
+  K --> K2["Then affords expensive items<br/>→ uses them efficiently"]
+  Drop["Drop the algorithm"] --> D1["OK for low values"]
+  Drop --> D2["High values: slow ramp-up,<br/>very fast ramp-down → can't sustain"]
+```
+
 ### It's not only about reaching the mean — it's about holding it
 
 Because it does not come down only to reaching the **mean** (the midpoint)
@@ -152,6 +183,12 @@ elements are not good; but fewer, efficient elements matter substantially, also
 with respect to the goal of this mission: reaching the mean faster, and its
 efficiency too.
 
+```mermaid
+flowchart LR
+  A["More inefficient elements"] -->|worse| Goal["Reach and hold the mean, efficiently"]
+  B["Fewer, efficient elements"] -->|better| Goal
+```
+
 ---
 
 ## 🏗️ Architecture
@@ -160,6 +197,29 @@ At the top level the file splits into the two independent tools described above.
 The live injector is a single timed loop of DOM clicks; the sandbox simulator is
 a small purchasing engine built from a strategy selector, two strategies, a
 `Buy` core, a set of cost-sequence generators, and a purchase tracker.
+
+```mermaid
+flowchart TD
+  File["cookie-hack.js"] --> Live["Live injector<br/>(cookieclicker/)"]
+  File --> Sim["Sandbox simulator<br/>(experiments/cookie/)"]
+
+  Live --> L1["Pin Game.cookies = Infinity"]
+  Live --> L2["Click enabled crate upgrades"]
+  Live --> L3["Buy products"]
+  Live --> L4["Recurring clickers:<br/>rows / bigCookie / cookieLevel"]
+
+  Sim --> Sel["mainPurchaseLoop<br/>strategy selector"]
+  Sel --> Sys["systematicPurchase<br/>expensive-first + re-check"]
+  Sel --> Low["lowStartPurchase<br/>cheapest-first"]
+  Sys --> Buy["Buy core"]
+  Low --> Buy
+  Buy --> Gen["Cost-sequence generators"]
+  Buy --> Track["purchaseTracker"]
+  Track --> Cps["updateCpS / showStatus"]
+
+  classDef accent fill:#E8A33D,stroke:#7A4E1E,color:#1b1b1b;
+  class Sel accent;
+```
 
 ---
 
@@ -182,6 +242,21 @@ existing:
 
 `Game.heavenlyChips` is set once, at load, to a very large value.
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant T as Loop (50 ms)
+  participant G as Game
+  participant D as DOM
+  T->>G: Game.cookies = Infinity
+  T->>D: scan #toggleUpgrades → click enabled crates
+  T->>D: scan #techUpgrades → click enabled crates
+  T->>D: scan #upgrades → click enabled crates
+  T->>D: one-time first-product click (if not .selected)
+  T->>D: scan #products → click unlocked+enabled products
+  Note over T,D: #rows, #bigCookie and cookieLevel clickers<br/>are registered once and run on their own timers
+```
+
 ### Part 2 — The sandbox simulator (one purchase cycle)
 
 Every 100 ms, `mainPurchaseLoop()` decides which strategy to run:
@@ -197,6 +272,22 @@ cost, updates total CpS, clicks the matching `buy<Item>` DOM button, and prints
 a purchase table. When nothing is affordable, `updateCookies()` accrues cookies
 from elapsed time × CpS, and a five-purchase forecast is printed.
 
+```mermaid
+flowchart TD
+  Start["mainPurchaseLoop (every 100 ms)"] --> Cond{"Cookies &le; 1000<br/>AND CpS &lt; 10 ?"}
+  Cond -- yes --> Low["lowStartPurchase<br/>cheapest → dearest"]
+  Cond -- no --> Sys["systematicPurchase<br/>dearest → cheapest"]
+  Sys --> Recheck{"Afford dearest?"}
+  Recheck -- no --> Up["Re-check: did a dearer item<br/>just become affordable?"]
+  Up --> Buy{"Buy an item?"}
+  Recheck -- yes --> Buy
+  Low --> Buy
+  Buy -- yes --> Apply["Deduct cost, count++,<br/>updateCpS, click buy button,<br/>showPurchaseTable"]
+  Buy -- no --> Wait["updateCookies:<br/>accrue CpS × elapsed"]
+  Apply --> Forecast["forecastCookies(item, 5)"]
+  Wait --> Forecast
+```
+
 ---
 
 ## 🧩 Dependencies & Relations
@@ -206,6 +297,25 @@ each strategy calls the shared `Buy` core; `Buy`, `getItemCost`, and
 `forecastCookies` all resolve an item's price through the cost-sequence
 generators; every purchase updates the shared `purchaseTracker`, which in turn
 feeds `updateCpS`, `showPurchaseTable`, and `showStatus`.
+
+```mermaid
+flowchart LR
+  MPL["mainPurchaseLoop"] --> SYS["systematicPurchase"]
+  MPL --> LOW["lowStartPurchase"]
+  SYS --> BUY["Buy"]
+  LOW --> BUY
+  SYS --> GIC["getItemCost"]
+  BUY --> SEQ["sequence generators"]
+  GIC --> SEQ
+  FC["forecastCookies"] --> SEQ
+  BUY --> PT["purchaseTracker"]
+  PT --> UCP["updateCpS"]
+  PT --> SPT["showPurchaseTable"]
+  PT --> SS["showStatus"]
+  BUY --> FC
+  SYS --> FC
+  LOW --> FC
+```
 
 - **`purchaseTracker`** — per-item `{ count, costs, totalCost }`. The single
   source of truth for how many of each item is owned.
