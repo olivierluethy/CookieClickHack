@@ -147,3 +147,31 @@ outcomes, same console log strings and tables.
 - **B11 — Mixed German/English** across README prose, code comments, and console
   logs. README prose is fully translated. **Console log strings are left in
   German on purpose** (B-section rule: log output is observable and preserved).
+
+---
+
+## Decisions taken
+
+- **Styleguide case = documentation-presentation.** The repo has no on-screen
+  application UI (surfaces are the README and browser-console output), so
+  `docs/STYLEGUIDE.md` captures documentation + console conventions and the
+  Mermaid theme, not app colours/components.
+- **B1 recurring clickers = redundant work, not intended behaviour.** The nested
+  `setInterval` registration was treated as unbounded timer accumulation and
+  hoisted to register once. Intended cadence (bigCookie/cookieLevel ~50 ms, rows
+  ~1 s) is preserved; observable game outcome is unchanged.
+- **`cookieLevel` null-guard added.** The original `sectionLeftExtra.children[0]
+  .children[0]` throws if the element is absent; the hoisted timer uses optional
+  chaining. On the live game (element present) behaviour is identical; the guard
+  only removes noise when the element is missing, where no click happened either
+  way.
+- **Unknown-item guard ordering in `forecastCookies`.** The config check now runs
+  before reading `purchaseTracker[item].count`. All real call sites pass valid
+  `purchaseOrder` items, so outputs are identical for every actual input; the
+  change only makes a never-hit unknown-item path fail cleanly instead of
+  throwing.
+- **B9 sequence memoisation deferred.** Sequences are still rebuilt per call to
+  keep outputs provably identical; caching is the natural next step but was left
+  out of this behaviour-preserving pass.
+- **Brainstorming/questions skipped.** The spec pinned all decisions up front and
+  forbade clarifying questions, so work proceeded autonomously.
